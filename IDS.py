@@ -21,7 +21,7 @@ def load_rules(rule_file):
 
 # Function to check if a packet matches any rule
 def match_rule(packet, rules):
-    global syn_tracker, udp_tracker, icmp_tracker
+    global syn_tracker, udp_tracker
     try:
         if 'IP' in packet:
             src_ip = packet.ip.src
@@ -56,13 +56,23 @@ def match_rule(packet, rules):
 
             # Detect UDP Flood
             if proto == "UDP":
-                udp_tracker[src_ip]["count"] += 1
-                now = time.time()
-                if now - udp_tracker[src_ip]["timestamp"] < 3:  # 3 sec window
-                    if udp_tracker[src_ip]["count"] > 20:  # More than 20 UDP packets in 3 sec
-                        print(f"[ALERT] UDP Flood detected! Source: {src_ip}")
-                else:
-                    udp_tracker[src_ip] = {"count": 1, "timestamp": now}
+                dst_port = int(packet.udp.dstport) if hasattr(packet, 'udp') else None
+
+                # List of ports to ignore (common benign UDP traffic)
+                ignored_ports = [53, 443]  # DNS and QUIC
+                list_ips = ["142.251."]  # Google's IP block (partial match) list of ips that blocking the alert
+
+                # Get source IP and check if it should be ignored
+                if dst_port not in ignored_ports and not any(src_ip.startswith(ip) for ip in list_ips):
+                    udp_tracker[src_ip]["count"] += 1
+                    now = time.time()
+
+                    if now - udp_tracker[src_ip]["timestamp"] < 5:  # 5 sec window
+                        if udp_tracker[src_ip]["count"] > 50:  # Adjusted threshold
+                            print(f"[ALERT] UDP Flood detected! Source: {src_ip}")
+                    else:
+                        udp_tracker[src_ip] = {"count": 1, "timestamp": now}
+
 
     except Exception as e:
         print(f"Error processing packet: {e}")
