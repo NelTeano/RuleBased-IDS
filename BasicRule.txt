@@ -1,0 +1,8 @@
+# Detect Port Scanning (Multiple SYN packets from same source)
+* * TCP SYN_SCAN
+
+# Detect UDP Flood Attack
+* * UDP flood
+
+# Detect Specific Exploit in Packet Payload
+* * * malicious_payload
