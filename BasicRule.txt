@@ -10,3 +10,5 @@
 # * * * meterpreter
 * * HTTP malicious_payload
 
+# Detect SSL/TLS Brute Force
+* * TLS ssl_brute_force

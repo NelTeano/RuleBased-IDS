@@ -1,0 +1,31 @@
+# alert icmp any any -> any any (msg: "ICMP Ping Detected"; sid:1000001;)
+# alert tcp any any -> any any (flags: S; msg: "Possible SYN Flood Attack"; sid:1000002;)
+# alert udp any any -> any any (msg: "UDP Packet Detected"; sid:1000003;)
+# alert tcp any any -> any any (flags: FPU; msg: "Possible Stealth Scan Detected"; sid:1000004;)
+alert tcp any any -> any 3000 (msg: "Possible SSH Brute Force Attack"; sid:1000005;)
+alert tcp any any -> any 22 (msg: "SSH Brute Force Attempt"; flags: S; sid:100001;)
+# alert tcp any any -> any 80 (msg: "HTTP Login Attempt Detected"; sid:1000006;)
+# alert udp any any -> any 53 (msg: "DNS Query Detected"; sid:1000007;)
+# alert udp any any -> any 53 (msg: "Possible DNS Amplification Attack"; sid:1000011;)
+
+# Additional common attack rules:
+alert tcp any any -> any 21 (msg: "Possible FTP Brute Force Attack"; sid:1000008;)
+alert tcp any any -> any 23 (msg: "Possible Telnet Brute Force Attack"; sid:1000009;)
+alert tcp any any -> any 25 (msg: "Possible SMTP Relay Attack"; sid:1000010;)
+alert udp any any -> any 161 (msg: "Possible SNMP Attack Detected"; sid:1000012;)
+alert tcp any any -> any 3306 (msg: "Possible MySQL Brute Force Attack"; sid:1000013;)
+alert tcp any any -> any 3389 (msg: "Possible RDP Brute Force Attack"; sid:1000014;)
+alert tcp any any -> any 445 (msg: "Possible SMB Exploit Attempt"; sid:1000015;)
+
+# --- New DDoS / DoS Attack Rules ---
+# alert udp any any -> any 443 (msg: "Possible HTTPS Flood Attack"; sid:1000017;)
+alert udp any any -> any 80 (msg: "Possible HTTP Flood Attack"; sid:1000016;)
+alert udp any any -> any 19 (msg: "Possible UDP Chargen Reflection DDoS"; sid:1000018;)
+alert udp any any -> any 123 (msg: "Possible NTP Amplification Attack"; sid:1000019;)
+alert udp any any -> any 1900 (msg: "Possible SSDP Amplification Attack"; sid:1000020;)
+# alert udp any any -> any 5353 (msg: "Possible mDNS Amplification Attack"; sid:1000021;)
+alert tcp any any -> any 80 (flags: S; msg: "Possible Slowloris HTTP DoS Attack"; sid:1000023;)
+
+# --- MITM (Man-in-the-Middle) Attacks ---
+# alert tcp any any -> any 443 (msg: "Possible SSL Strip Attack"; sid:1000026;)
+alert tcp any any -> any 8080 (msg: "Suspicious Proxy Interception Detected"; sid:1000027;)
