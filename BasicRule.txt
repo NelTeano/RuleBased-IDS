@@ -12,3 +12,4 @@
 
 # Detect SSL/TLS Brute Force
 * * TLS ssl_brute_force
+* * TCP ftp_login
