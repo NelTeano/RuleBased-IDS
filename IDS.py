@@ -6,6 +6,8 @@ import time
 # Track SYN packets
 syn_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
 ssh_brute_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
+ftp_brute_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
+
 
 # Track UDP packets
 udp_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
@@ -26,7 +28,7 @@ def load_rules(rule_file):
     return rules
 
 def match_rule(packet, rules):
-    global syn_tracker, udp_tracker, ssh_brute_tracker
+    global syn_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker
     try:
         if 'IP' in packet:
             src_ip = packet.ip.src
@@ -89,12 +91,12 @@ def match_rule(packet, rules):
                     dst_port = int(packet.tcp.dstport)
                     now = time.time()
 
-                    print(f"[SYN FOUND BUT NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
+                    print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
 
                     # General SYN Scan
                     syn_tracker[src_ip]["count"] += 1
-                    if now - syn_tracker[src_ip]["timestamp"] < 3:
-                        if syn_tracker[src_ip]["count"] > 5:
+                    if now - syn_tracker[src_ip]["timestamp"] < 5:
+                        if syn_tracker[src_ip]["count"] > 50:
                             print(f"[ALERT] SYN Scan detected! Source: {src_ip}")
                     else:
                         syn_tracker[src_ip] = {"count": 1, "timestamp": now}
