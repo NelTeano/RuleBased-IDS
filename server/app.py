@@ -14,14 +14,6 @@ def home():
 
 
 
-# @app.route('/call-node')
-# def call_node():
-#     try:
-#         response = requests.get('http://localhost:3000/api/data')  # Your Node.js endpoint
-#         return jsonify(response.json())
-#     except requests.exceptions.RequestException as e:
-#         return jsonify({'error': str(e)}), 500
-
 @app.route('/trigger-intrusion', methods=['POST'])
 def trigger_intrusion():
     try:

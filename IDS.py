@@ -89,7 +89,7 @@ def match_rule(packet, rules):
                     dst_port = int(packet.tcp.dstport)
                     now = time.time()
 
-                    print(f"[DEBUG] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
+                    print(f"[SYN FOUND BUT NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
 
                     # General SYN Scan
                     syn_tracker[src_ip]["count"] += 1
@@ -99,16 +99,16 @@ def match_rule(packet, rules):
                     else:
                         syn_tracker[src_ip] = {"count": 1, "timestamp": now}
 
-                    # SSH Brute Force Detection (Repeated SYN to port 22)
-                    monitored_login_ports = monitored_brute_ports
+                    # SSH Brute Force Detection
+                    # monitored_login_ports = monitored_brute_ports
 
-                    if dst_port in monitored_login_ports:
-                        ssh_brute_tracker[src_ip]["count"] += 1
-                        if now - ssh_brute_tracker[src_ip]["timestamp"] < 10:
-                            if ssh_brute_tracker[src_ip]["count"] > 4:
-                                print(f"[ALERT] Potential Brute Force! Source: {src_ip} → Port {dst_port}")
-                        else:
-                            ssh_brute_tracker[src_ip] = {"count": 1, "timestamp": now}
+                    # if dst_port in monitored_login_ports:
+                    #     ssh_brute_tracker[src_ip]["count"] += 1
+                    #     if now - ssh_brute_tracker[src_ip]["timestamp"] < 10:
+                    #         if ssh_brute_tracker[src_ip]["count"] > 4:
+                    #             print(f"[ALERT] Potential Brute Force! Source: {src_ip} → Port {dst_port}")
+                    #     else:
+                    #         ssh_brute_tracker[src_ip] = {"count": 1, "timestamp": now}
 
             # UDP Flood Detection
             if proto == "UDP":

@@ -45,10 +45,6 @@ app.post('/login', (req, res) => {
     }
 });
 
-// Default route
-app.get('/', (req, res) => {
-    res.send('Simple Login Server for Pen Testing Simulation');
-});
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
