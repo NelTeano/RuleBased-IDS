@@ -8,10 +8,20 @@ ssh_brute_tracker = defaultdict(int)
 ftp_brute_tracker = defaultdict(int)
 BRUTE_THRESHOLD = 10
 
-# Track SYN packets
+# Track Scan packets
 port_scan_tracker = defaultdict(lambda: {"ports": set(), "timestamps": []})
 PORTSCAN_WINDOW = 5  # seconds
 PORTSCAN_THRESHOLD = 50  # unique ports in short time
+
+nmap_scan_tracker = defaultdict(lambda: {"ports": set(), "timestamps": []})
+
+
+# Track SYN packets
+syn_flood_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
+FLOOD_WINDOW = 5  # seconds
+FLOOD_THRESHOLD = 100  # number of SYNs within the time window to be flagged
+
+
 
 
 
@@ -110,17 +120,31 @@ def match_rule(packet, rules):
 
                     print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
 
+                    #### ✅ PORT SCAN DETECTION ####
                     entry = port_scan_tracker[src_ip]
-                    
-                    # Clean old timestamps
                     entry["timestamps"] = [t for t in entry["timestamps"] if now - t < PORTSCAN_WINDOW]
                     entry["timestamps"].append(now)
                     entry["ports"].add(dst_port)
 
                     if len(entry["ports"]) > PORTSCAN_THRESHOLD and len(entry["timestamps"]) > PORTSCAN_THRESHOLD:
                         print(f"[RECORD] PORT SCAN detected! Source: {src_ip}")
-                        # Reset to avoid repeat alerts
                         port_scan_tracker[src_ip] = {"ports": set(), "timestamps": []}
+
+
+                    #### ✅ SYN FLOOD DETECTION ####
+                    flood_key = (src_ip, dst_ip, dst_port)
+                    flood_entry = syn_flood_tracker[flood_key]
+
+                    if now - flood_entry["first_seen"] <= FLOOD_WINDOW:
+                        flood_entry["count"] += 1
+                        if flood_entry["count"] > FLOOD_THRESHOLD:
+                            print(f"[RECORD] SYN Flood detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {flood_entry['count']}")
+                            syn_flood_tracker[flood_key] = {"count": 0, "first_seen": now}
+                    else:
+                        syn_flood_tracker[flood_key] = {"count": 1, "first_seen": now}
+
+
+                    ### PORT SCAN NMAP DETECTION
 
             # Additional: SYN Scan Detection
             # if proto == "TCP" and hasattr(packet, 'tcp') and hasattr(packet.tcp, "flags"):
