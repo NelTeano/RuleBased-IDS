@@ -21,9 +21,15 @@ syn_flood_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
 FLOOD_WINDOW = 5  # seconds
 FLOOD_THRESHOLD = 100  # number of SYNs within the time window to be flagged
 
+# Track Slowlor packets
+slowloris_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
+SLOWLORIS_WINDOW = 30  # seconds
+SLOWLORIS_THRESHOLD = 20  # SYNs to same IP:port from 1 IP in this window
 
-
-
+## BotNet Detection
+botnet_tracker = defaultdict(lambda: {"port": 0, "count": 1, "first_seen": time.time()})
+BOTNET_WINDOW = 3  # seconds
+BOTNET_THRESHOLD = 50  # SYNs to same IP:port from 1 IP in this window
 
 # Track UDP packets
 # udp_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
@@ -142,6 +148,33 @@ def match_rule(packet, rules):
                             syn_flood_tracker[flood_key] = {"count": 0, "first_seen": now}
                     else:
                         syn_flood_tracker[flood_key] = {"count": 1, "first_seen": now}
+
+                    #### ✅ SLOWLORIS DETECTION ####
+                    slowloris_key = (src_ip, dst_ip, dst_port)
+                    entry = slowloris_tracker[slowloris_key]
+
+                    if now - entry["first_seen"] <= SLOWLORIS_WINDOW:
+                        entry["count"] += 1
+                        if entry["count"] > SLOWLORIS_THRESHOLD:
+                            print(f"[RECORD] Slowloris attack detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {entry['count']}")
+                            slowloris_tracker[slowloris_key] = {"count": 0, "first_seen": now}
+                    else:
+                        slowloris_tracker[slowloris_key] = {"count": 1, "first_seen": now}
+
+                if flags_int == 0x12:  # SYN-ACK
+                    src_port = int(packet.tcp.srcport)
+                    now = time.time()
+
+                    # Track SYN-ACKs per (src_ip, src_port)
+                    synack_key = (src_ip, src_port)
+                    entry = botnet_tracker[synack_key]
+                    if now - entry.get("first_seen", now) <= BOTNET_WINDOW:
+                        entry["count"] += 1
+                        if entry["count"] > BOTNET_THRESHOLD:
+                            print(f"[RECORD] TOO MANY SYN-ACK Packets POSSIBLE BOTNET ATTACK from {src_ip}:{src_port} in {BOTNET_WINDOW}s: Count={entry['count']}, Time={now}")
+                            botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
+                    else:
+                        botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
 
 
                     ### PORT SCAN NMAP DETECTION
