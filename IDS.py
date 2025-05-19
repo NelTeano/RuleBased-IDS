@@ -3,14 +3,20 @@ import re
 from collections import defaultdict
 import time
 
+# Track Brute packets
+ssh_brute_tracker = defaultdict(int)
+ftp_brute_tracker = defaultdict(int)
+BRUTE_THRESHOLD = 10
+
 # Track SYN packets
-syn_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
-ssh_brute_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
-ftp_brute_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
+port_scan_tracker = defaultdict(lambda: {"ports": set(), "timestamps": []})
+PORTSCAN_WINDOW = 5  # seconds
+PORTSCAN_THRESHOLD = 50  # unique ports in short time
+
 
 
 # Track UDP packets
-udp_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
+# udp_tracker = defaultdict(lambda: {"count": 0, "timestamp": time.time()})
 
 # Brute force PORTS
 monitored_brute_ports = [20, 21, 22, 3000]  # You can add 80, 443, etc.
@@ -28,7 +34,7 @@ def load_rules(rule_file):
     return rules
 
 def match_rule(packet, rules):
-    global syn_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker
+    global port_scan_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker
     try:
         if 'IP' in packet:
             src_ip = packet.ip.src
@@ -68,7 +74,18 @@ def match_rule(packet, rules):
                             continue
                     msg_search = re.search(r'msg:\s*"(.*?)";', options)
                     msg = msg_search.group(1) if msg_search else "Alert triggered"
+                    
+
+                    if "SSH Brute Force" in msg or "FTP Brute Force" in msg:
+                        key = (src_ip, dst_ip)
+                        tracker = ftp_brute_tracker if "FTP Brute Force" in msg else ssh_brute_tracker
+                        tracker[key] += 1
+                        if tracker[key] == BRUTE_THRESHOLD:
+                            print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
+                            tracker[key] = 0
+
                     print(f"[ALERT] {msg} Source: {src_ip}, Destination: {dst_ip}, Protocol: {proto}")
+
                 else:
                     rule_parts = rule.split()
                     if len(rule_parts) < 4:
@@ -80,26 +97,51 @@ def match_rule(packet, rules):
                     if rule_payload != '*' and not re.search(rule_payload, str(payload)): continue
                     print(f"[ALERT] Rule matched! Source: {src_ip}, Destination: {dst_ip}, Protocol: {proto}")
 
-            # Additional: SYN Scan Detection
+
             if proto == "TCP" and hasattr(packet, 'tcp') and hasattr(packet.tcp, "flags"):
                 try:
                     flags_int = int(packet.tcp.flags, 16)
                 except Exception:
                     flags_int = 0
 
-                if flags_int == 2:  # SYN flag only
+                if flags_int == 0x02:  # SYN only
                     dst_port = int(packet.tcp.dstport)
                     now = time.time()
 
                     print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
 
-                    # General SYN Scan
-                    syn_tracker[src_ip]["count"] += 1
-                    if now - syn_tracker[src_ip]["timestamp"] < 5:
-                        if syn_tracker[src_ip]["count"] > 50:
-                            print(f"[ALERT] SYN Scan detected! Source: {src_ip}")
-                    else:
-                        syn_tracker[src_ip] = {"count": 1, "timestamp": now}
+                    entry = port_scan_tracker[src_ip]
+                    
+                    # Clean old timestamps
+                    entry["timestamps"] = [t for t in entry["timestamps"] if now - t < PORTSCAN_WINDOW]
+                    entry["timestamps"].append(now)
+                    entry["ports"].add(dst_port)
+
+                    if len(entry["ports"]) > PORTSCAN_THRESHOLD and len(entry["timestamps"]) > PORTSCAN_THRESHOLD:
+                        print(f"[RECORD] PORT SCAN detected! Source: {src_ip}")
+                        # Reset to avoid repeat alerts
+                        port_scan_tracker[src_ip] = {"ports": set(), "timestamps": []}
+
+            # Additional: SYN Scan Detection
+            # if proto == "TCP" and hasattr(packet, 'tcp') and hasattr(packet.tcp, "flags"):
+            #     try:
+            #         flags_int = int(packet.tcp.flags, 16)
+            #     except Exception:
+            #         flags_int = 0
+
+            #     if flags_int == 2:  # SYN flag only
+            #         dst_port = int(packet.tcp.dstport)
+            #         now = time.time()
+
+            #         print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
+
+            #         # General SYN Scan
+            #         port_scan_tracker[src_ip]["count"] += 1
+            #         if now - port_scan_tracker[src_ip]["timestamp"] < 5:
+            #             if port_scan_tracker[src_ip]["count"] > 50:
+            #                 print(f"[RECORD] SYN Scan detected! Source: {src_ip}")
+            #         else:
+            #             port_scan_tracker[src_ip] = {"count": 1, "timestamp": now}
 
                     # SSH Brute Force Detection
                     # monitored_login_ports = monitored_brute_ports
@@ -113,18 +155,18 @@ def match_rule(packet, rules):
                     #         ssh_brute_tracker[src_ip] = {"count": 1, "timestamp": now}
 
             # UDP Flood Detection
-            if proto == "UDP":
-                dst_port = int(packet.udp.dstport) if hasattr(packet, 'udp') else None
-                ignored_ports = [53, 443]
-                list_ips = ["142.251.220.196", "142.251.220.206", "142.251.221"]
-                if dst_port not in ignored_ports and not any(src_ip.startswith(ip) for ip in list_ips):
-                    udp_tracker[src_ip]["count"] += 1
-                    now = time.time()
-                    if now - udp_tracker[src_ip]["timestamp"] < 5:
-                        if udp_tracker[src_ip]["count"] > 50:
-                            print(f"[ALERT] UDP Flood detected! Source: {src_ip}")
-                    else:
-                        udp_tracker[src_ip] = {"count": 1, "timestamp": now}
+            # if proto == "UDP":
+            #     dst_port = int(packet.udp.dstport) if hasattr(packet, 'udp') else None
+            #     ignored_ports = [53, 443]
+            #     list_ips = ["142.251.220.196", "142.251.220.206", "142.251.221"]
+            #     if dst_port not in ignored_ports and not any(src_ip.startswith(ip) for ip in list_ips):
+            #         udp_tracker[src_ip]["count"] += 1
+            #         now = time.time()
+            #         if now - udp_tracker[src_ip]["timestamp"] < 5:
+            #             if udp_tracker[src_ip]["count"] > 50:
+            #                 print(f"[ALERT] UDP Flood detected! Source: {src_ip}")
+            #         else:
+            #             udp_tracker[src_ip] = {"count": 1, "timestamp": now}
 
     except Exception as e:
         print(f"Error processing packet: {e}")
