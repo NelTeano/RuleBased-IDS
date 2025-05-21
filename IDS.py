@@ -195,15 +195,17 @@ def match_rule(packet, rules):
                     if now - flood_entry["first_seen"] <= FLOOD_WINDOW:
                         flood_entry["count"] += 1
                         if flood_entry["count"] > FLOOD_THRESHOLD:
-                            detection_details = {
-                                "src_ip": src_ip,
-                                "dst_ip": dst_ip,
-                                "intrusion_type": "DoS Attack",
-                                "timestamp": now
-                            }
-                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                            print(f"[RECORD] SYN Flood detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {flood_entry['count']}")
-                            syn_flood_tracker[flood_key] = {"count": 0, "first_seen": now}
+                            if not last_post_request or now - last_post_request > time_interval:
+                                detection_details = {
+                                    "src_ip": src_ip,
+                                    "dst_ip": dst_ip,
+                                    "intrusion_type": "DoS Attack",
+                                    "timestamp": now
+                                }
+                                send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                                print(f"[RECORD] SYN Flood detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {flood_entry['count']}")
+                                syn_flood_tracker[flood_key] = {"count": 0, "first_seen": now}
+                                last_post_request = now
                     else:
                         syn_flood_tracker[flood_key] = {"count": 1, "first_seen": now}
 
