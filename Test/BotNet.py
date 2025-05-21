@@ -1,4 +1,4 @@
-from scapy.all import *
+from scapy.all import IP, TCP, RandIP, send
 import random
 import threading
 

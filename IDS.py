@@ -161,69 +161,19 @@ def match_rule(packet, rules):
                     else:
                         slowloris_tracker[slowloris_key] = {"count": 1, "first_seen": now}
 
-                if flags_int == 0x12:  # SYN-ACK
+                if flags_int == 0x014:   #### ✅ BOTNET DETECTION ####
                     src_port = int(packet.tcp.srcport)
                     now = time.time()
-
-                    # Track SYN-ACKs per (src_ip, src_port)
+                    
                     synack_key = (src_ip, src_port)
                     entry = botnet_tracker[synack_key]
                     if now - entry.get("first_seen", now) <= BOTNET_WINDOW:
                         entry["count"] += 1
                         if entry["count"] > BOTNET_THRESHOLD:
-                            print(f"[RECORD] TOO MANY SYN-ACK Packets POSSIBLE BOTNET ATTACK from {src_ip}:{src_port} in {BOTNET_WINDOW}s: Count={entry['count']}, Time={now}")
+                            print(f"[RECORD] POSSIBLE BOTNET ATTACK TOO MANY SYN-ACK Packets from {src_ip}:{src_port} in Time={now}")
                             botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
                     else:
                         botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
-
-
-                    ### PORT SCAN NMAP DETECTION
-
-            # Additional: SYN Scan Detection
-            # if proto == "TCP" and hasattr(packet, 'tcp') and hasattr(packet.tcp, "flags"):
-            #     try:
-            #         flags_int = int(packet.tcp.flags, 16)
-            #     except Exception:
-            #         flags_int = 0
-
-            #     if flags_int == 2:  # SYN flag only
-            #         dst_port = int(packet.tcp.dstport)
-            #         now = time.time()
-
-            #         print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
-
-            #         # General SYN Scan
-            #         port_scan_tracker[src_ip]["count"] += 1
-            #         if now - port_scan_tracker[src_ip]["timestamp"] < 5:
-            #             if port_scan_tracker[src_ip]["count"] > 50:
-            #                 print(f"[RECORD] SYN Scan detected! Source: {src_ip}")
-            #         else:
-            #             port_scan_tracker[src_ip] = {"count": 1, "timestamp": now}
-
-                    # SSH Brute Force Detection
-                    # monitored_login_ports = monitored_brute_ports
-
-                    # if dst_port in monitored_login_ports:
-                    #     ssh_brute_tracker[src_ip]["count"] += 1
-                    #     if now - ssh_brute_tracker[src_ip]["timestamp"] < 10:
-                    #         if ssh_brute_tracker[src_ip]["count"] > 4:
-                    #             print(f"[ALERT] Potential Brute Force! Source: {src_ip} → Port {dst_port}")
-                    #     else:
-                    #         ssh_brute_tracker[src_ip] = {"count": 1, "timestamp": now}
-
-            # UDP Flood Detection
-            # if proto == "UDP":
-            #     dst_port = int(packet.udp.dstport) if hasattr(packet, 'udp') else None
-            #     ignored_ports = [53, 443]
-            #     list_ips = ["142.251.220.196", "142.251.220.206", "142.251.221"]
-            #     if dst_port not in ignored_ports and not any(src_ip.startswith(ip) for ip in list_ips):
-            #         udp_tracker[src_ip]["count"] += 1
-            #         now = time.time()
-            #         if now - udp_tracker[src_ip]["timestamp"] < 5:
-            #             if udp_tracker[src_ip]["count"] > 50:
-            #                 print(f"[ALERT] UDP Flood detected! Source: {src_ip}")
-            #         else:
-            #             udp_tracker[src_ip] = {"count": 1, "timestamp": now}
 
     except Exception as e:
         print(f"Error processing packet: {e}")
