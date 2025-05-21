@@ -23,6 +23,7 @@ PORTSCAN_THRESHOLD = 50  # unique ports in short time
 syn_flood_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
 FLOOD_WINDOW = 1  # seconds
 FLOOD_THRESHOLD = 400  # number of SYNs within the time window to be flagged
+last_post_request = 0  # Track the last POST request time
 
 # Track Slowlor packets
 slowloris_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
@@ -65,7 +66,7 @@ def load_rules(rule_file):
     return rules
 
 def match_rule(packet, rules):
-    global port_scan_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker
+    global port_scan_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker, last_post_request
     try:
         if 'IP' in packet:
             src_ip = packet.ip.src
@@ -210,15 +211,17 @@ def match_rule(packet, rules):
                     if now - entry["first_seen"] <= SLOWLORIS_WINDOW:
                         entry["count"] += 1
                         if entry["count"] > SLOWLORIS_THRESHOLD:
-                            detection_details = {
-                                "src_ip": src_ip,
-                                "dst_ip": dst_ip,
-                                "intrusion_type": "DoS Attack",
-                                "timestamp": now
-                            }
-                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                            print(f"[RECORD] Slowloris attack detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {entry['count']}")
-                            slowloris_tracker[slowloris_key] = {"count": 0, "first_seen": now}
+                            if not last_post_request or now - last_post_request > 5:
+                                detection_details = {
+                                    "src_ip": src_ip,
+                                    "dst_ip": dst_ip,
+                                    "intrusion_type": "DoS Attack",
+                                    "timestamp": now
+                                }
+                                send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                                print(f"[RECORD] Slowloris attack detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {entry['count']}")
+                                slowloris_tracker[slowloris_key] = {"count": 0, "first_seen": now}
+                                last_post_request = now
                     else:
                         slowloris_tracker[slowloris_key] = {"count": 1, "first_seen": now}
 
