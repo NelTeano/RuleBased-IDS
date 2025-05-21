@@ -2,6 +2,11 @@ import pyshark
 import re
 from collections import defaultdict
 import time
+import requests
+
+# Constants
+IDS_SERVER_PORT = 5000  # Flask server port for intrusion detection
+print(f"[INFO] IDS_SERVER_PORT: {IDS_SERVER_PORT}")
 
 # Track Brute packets
 ssh_brute_tracker = defaultdict(int)
@@ -13,13 +18,11 @@ port_scan_tracker = defaultdict(lambda: {"ports": set(), "timestamps": []})
 PORTSCAN_WINDOW = 5  # seconds
 PORTSCAN_THRESHOLD = 50  # unique ports in short time
 
-nmap_scan_tracker = defaultdict(lambda: {"ports": set(), "timestamps": []})
-
 
 # Track SYN packets
 syn_flood_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
-FLOOD_WINDOW = 5  # seconds
-FLOOD_THRESHOLD = 100  # number of SYNs within the time window to be flagged
+FLOOD_WINDOW = 1  # seconds
+FLOOD_THRESHOLD = 400  # number of SYNs within the time window to be flagged
 
 # Track Slowlor packets
 slowloris_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
@@ -36,6 +39,18 @@ BOTNET_THRESHOLD = 50  # SYNs to same IP:port from 1 IP in this window
 
 # Brute force PORTS
 monitored_brute_ports = [20, 21, 22, 3000]  # You can add 80, 443, etc.
+
+
+def send_detection_occure(url, data):
+    try:
+        response = requests.post(url, json=data, timeout=2)
+        if response.status_code == 429:
+            print("[WARN] Rate limit hit on Flask server.")
+        elif not response.ok:
+            print(f"[WARN] POST failed: {response.status_code} {response.text}")
+    except Exception as e:
+        print(f"[WARN] POST request failed: {e}")
+
 
 def load_rules(rule_file):
     rules = []
@@ -92,14 +107,39 @@ def match_rule(packet, rules):
                     msg = msg_search.group(1) if msg_search else "Alert triggered"
                     
 
-                    if "SSH Brute Force" in msg or "FTP Brute Force" in msg:
+                    if "SSH Brute Force" in msg:
                         key = (src_ip, dst_ip)
-                        tracker = ftp_brute_tracker if "FTP Brute Force" in msg else ssh_brute_tracker
+                        tracker = ssh_brute_tracker
                         tracker[key] += 1
                         if tracker[key] == BRUTE_THRESHOLD:
+                            now = time.time()
+                            detection_details = {
+                                "src_ip": src_ip,
+                                "dst_ip": dst_ip,
+                                "intrusion_type": "SSH PATATOR",
+                                "timestamp": now
+                            }
+                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
                             print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
                             tracker[key] = 0
 
+                    elif "FTP Brute Force" in msg:
+                        key = (src_ip, dst_ip)
+                        tracker = ftp_brute_tracker
+                        tracker[key] += 1
+                        if tracker[key] == BRUTE_THRESHOLD:
+                            now = time.time()
+                            detection_details = {
+                                "src_ip": src_ip,
+                                "dst_ip": dst_ip,
+                                "intrusion_type": "FTP PATATOR",
+                                "timestamp": now
+                            }
+                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                            print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
+                            tracker[key] = 0
+
+                    # This line will run regardless of the type
                     print(f"[ALERT] {msg} Source: {src_ip}, Destination: {dst_ip}, Protocol: {proto}")
 
                 else:
@@ -133,6 +173,13 @@ def match_rule(packet, rules):
                     entry["ports"].add(dst_port)
 
                     if len(entry["ports"]) > PORTSCAN_THRESHOLD and len(entry["timestamps"]) > PORTSCAN_THRESHOLD:
+                        detection_details = {
+                            "src_ip": src_ip,
+                            "dst_ip": dst_ip,
+                            "intrusion_type": "Port Scan",
+                            "timestamp": now
+                        }
+                        send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
                         print(f"[RECORD] PORT SCAN detected! Source: {src_ip}")
                         port_scan_tracker[src_ip] = {"ports": set(), "timestamps": []}
 
@@ -144,6 +191,13 @@ def match_rule(packet, rules):
                     if now - flood_entry["first_seen"] <= FLOOD_WINDOW:
                         flood_entry["count"] += 1
                         if flood_entry["count"] > FLOOD_THRESHOLD:
+                            detection_details = {
+                                "src_ip": src_ip,
+                                "dst_ip": dst_ip,
+                                "intrusion_type": "DoS Attack",
+                                "timestamp": now
+                            }
+                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
                             print(f"[RECORD] SYN Flood detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {flood_entry['count']}")
                             syn_flood_tracker[flood_key] = {"count": 0, "first_seen": now}
                     else:
@@ -156,6 +210,13 @@ def match_rule(packet, rules):
                     if now - entry["first_seen"] <= SLOWLORIS_WINDOW:
                         entry["count"] += 1
                         if entry["count"] > SLOWLORIS_THRESHOLD:
+                            detection_details = {
+                                "src_ip": src_ip,
+                                "dst_ip": dst_ip,
+                                "intrusion_type": "DoS Attack",
+                                "timestamp": now
+                            }
+                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
                             print(f"[RECORD] Slowloris attack detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {entry['count']}")
                             slowloris_tracker[slowloris_key] = {"count": 0, "first_seen": now}
                     else:
@@ -170,6 +231,13 @@ def match_rule(packet, rules):
                     if now - entry.get("first_seen", now) <= BOTNET_WINDOW:
                         entry["count"] += 1
                         if entry["count"] > BOTNET_THRESHOLD:
+                            detection_details = {
+                                "src_ip": src_ip,
+                                "dst_ip": dst_ip,
+                                "intrusion_type": "Botnet Attack",
+                                "timestamp": now
+                            }
+                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
                             print(f"[RECORD] POSSIBLE BOTNET ATTACK TOO MANY SYN-ACK Packets from {src_ip}:{src_port} in Time={now}")
                             botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
                     else:
