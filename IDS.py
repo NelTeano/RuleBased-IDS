@@ -8,6 +8,10 @@ import requests
 IDS_SERVER_PORT = 5000  # Flask server port for intrusion detection
 print(f"[INFO] IDS_SERVER_PORT: {IDS_SERVER_PORT}")
 
+# Track HTTP POST requests
+last_post_request = 0 # Last time a POST request was sent (Do not change)
+time_interval = 5  # Time interval in seconds to wait before sending another POST request
+
 # Track Brute packets
 ssh_brute_tracker = defaultdict(int)
 ftp_brute_tracker = defaultdict(int)
@@ -23,7 +27,6 @@ PORTSCAN_THRESHOLD = 50  # unique ports in short time
 syn_flood_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
 FLOOD_WINDOW = 1  # seconds
 FLOOD_THRESHOLD = 400  # number of SYNs within the time window to be flagged
-last_post_request = 0  # Track the last POST request time
 
 # Track Slowlor packets
 slowloris_tracker = defaultdict(lambda: {"count": 0, "first_seen": time.time()})
@@ -66,7 +69,7 @@ def load_rules(rule_file):
     return rules
 
 def match_rule(packet, rules):
-    global port_scan_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker, last_post_request
+    global port_scan_tracker, udp_tracker, ssh_brute_tracker, ftp_brute_tracker, last_post_request, time_interval
     try:
         if 'IP' in packet:
             src_ip = packet.ip.src
@@ -211,7 +214,7 @@ def match_rule(packet, rules):
                     if now - entry["first_seen"] <= SLOWLORIS_WINDOW:
                         entry["count"] += 1
                         if entry["count"] > SLOWLORIS_THRESHOLD:
-                            if not last_post_request or now - last_post_request > 5:
+                            if not last_post_request or now - last_post_request > time_interval:
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
