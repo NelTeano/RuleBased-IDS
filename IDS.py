@@ -116,32 +116,36 @@ def match_rule(packet, rules):
                         tracker = ssh_brute_tracker
                         tracker[key] += 1
                         if tracker[key] == BRUTE_THRESHOLD:
-                            now = time.time()
-                            detection_details = {
-                                "src_ip": src_ip,
-                                "dst_ip": dst_ip,
-                                "intrusion_type": "SSH PATATOR",
-                                "timestamp": now
-                            }
-                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                            print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
-                            tracker[key] = 0
+                            if not last_post_request or now - last_post_request > time_interval:
+                                now = time.time()
+                                detection_details = {
+                                    "src_ip": src_ip,
+                                    "dst_ip": dst_ip,
+                                    "intrusion_type": "SSH PATATOR",
+                                    "timestamp": now
+                                }
+                                send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                                print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
+                                tracker[key] = 0
+                                last_post_request = now
 
                     elif "FTP Brute Force" in msg:
                         key = (src_ip, dst_ip)
                         tracker = ftp_brute_tracker
                         tracker[key] += 1
                         if tracker[key] == BRUTE_THRESHOLD:
-                            now = time.time()
-                            detection_details = {
-                                "src_ip": src_ip,
-                                "dst_ip": dst_ip,
-                                "intrusion_type": "FTP PATATOR",
-                                "timestamp": now
-                            }
-                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                            print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
-                            tracker[key] = 0
+                            if not last_post_request or now - last_post_request > time_interval:
+                                now = time.time()
+                                detection_details = {
+                                    "src_ip": src_ip,
+                                    "dst_ip": dst_ip,
+                                    "intrusion_type": "FTP PATATOR",
+                                    "timestamp": now
+                                }
+                                send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                                print(f"[RECORD] {msg} Detected! {BRUTE_THRESHOLD} attempts from {src_ip} to {dst_ip}")
+                                tracker[key] = 0
+                                last_post_request = now
 
                     # This line will run regardless of the type
                     print(f"[ALERT] {msg} Source: {src_ip}, Destination: {dst_ip}, Protocol: {proto}")
@@ -177,15 +181,17 @@ def match_rule(packet, rules):
                     entry["ports"].add(dst_port)
 
                     if len(entry["ports"]) > PORTSCAN_THRESHOLD and len(entry["timestamps"]) > PORTSCAN_THRESHOLD:
-                        detection_details = {
-                            "src_ip": src_ip,
-                            "dst_ip": dst_ip,
-                            "intrusion_type": "Port Scan",
-                            "timestamp": now
-                        }
-                        send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                        print(f"[RECORD] PORT SCAN detected! Source: {src_ip}")
-                        port_scan_tracker[src_ip] = {"ports": set(), "timestamps": []}
+                        if not last_post_request or now - last_post_request > time_interval:
+                            detection_details = {
+                                "src_ip": src_ip,
+                                "dst_ip": dst_ip,
+                                "intrusion_type": "Port Scan",
+                                "timestamp": now
+                            }
+                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                            print(f"[RECORD] PORT SCAN detected! Source: {src_ip}")
+                            port_scan_tracker[src_ip] = {"ports": set(), "timestamps": []}
+                            last_post_request = now
 
 
                     #### ✅ SYN FLOOD DETECTION ####
@@ -239,15 +245,17 @@ def match_rule(packet, rules):
                     if now - entry.get("first_seen", now) <= BOTNET_WINDOW:
                         entry["count"] += 1
                         if entry["count"] > BOTNET_THRESHOLD:
-                            detection_details = {
-                                "src_ip": src_ip,
-                                "dst_ip": dst_ip,
-                                "intrusion_type": "Botnet Attack",
-                                "timestamp": now
-                            }
-                            send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                            print(f"[RECORD] POSSIBLE BOTNET ATTACK TOO MANY SYN-ACK Packets from {src_ip}:{src_port} in Time={now}")
-                            botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
+                            if not last_post_request or now - last_post_request > time_interval:
+                                detection_details = {
+                                    "src_ip": src_ip,
+                                    "dst_ip": dst_ip,
+                                    "intrusion_type": "Botnet Attack",
+                                    "timestamp": now
+                                }
+                                send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                                print(f"[RECORD] POSSIBLE BOTNET ATTACK TOO MANY SYN-ACK Packets from {src_ip}:{src_port} in Time={now}")
+                                botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
+                                last_post_request = now
                     else:
                         botnet_tracker[synack_key] = {"port": src_port, "count": 1, "first_seen": now}
 
