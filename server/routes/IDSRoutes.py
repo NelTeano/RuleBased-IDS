@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from extensions import limiter  # ⬅️ import the same limiter
+from extensions import limiter  
 from controllers.IDSController import trigger_intrusion, test_get
 
 ## CONTROLLER IMPORTS
@@ -10,6 +10,7 @@ IDS_bp = Blueprint('IDS_bp', __name__)
 
 
 @IDS_bp.route('/trigger-intrusion', methods=['POST'])
+@limiter.limit("1 per 30 seconds")
 def trigger_intrusion_route():
     return trigger_intrusion()
 

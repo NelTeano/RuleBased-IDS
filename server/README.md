@@ -75,4 +75,22 @@ You should see output indicating the server and IDS ports.
 
 ---
 
+
+## Test Routes 
+
+**Trigger Intrusion Route**
+
+- `http://127.0.0.1:<SERVER-PORT>/api/ids/trigger-intrusion`
+
+```shell
+{
+  "src_ip": "192.168.1.10",
+  "dst_ip": "192.168.1.20",
+  "intrusion_type": "Syn Scan",
+  "timestamp": "2025-05-21T10:32:00Z"
+}
+```
+
+
+
 **For more details, see the main project README in the parent directory.**
