@@ -1,30 +1,50 @@
 # app.py
 from flask import Flask, jsonify, request
-import requests
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
 import os
 
-port = int(os.environ.get("PORT", 5000))
-app = Flask(__name__)
+## Importing Blueprints
+from routes.IDSRoutes import IDS_bp
 
-dashboardPORT = 5114  # Port for the Node.js dashboard server
+
+load_dotenv()
+
+
+app = Flask(__name__)
+load_dotenv()
+SERVER_PORT = os.getenv('SERVER_PORT')
+IDS_PORT = os.getenv('IDS_PORT')
+PORT = int(os.environ.get("PORT", SERVER_PORT))
+
+app.config['SERVER_PORT'] = SERVER_PORT
+app.config['IDS_PORT'] = IDS_PORT
+
+## Check if the environment variable is set
+if SERVER_PORT != '' and IDS_PORT != '':
+    print(f"SERVER_PORT: {SERVER_PORT}")
+    print(f"IDS_PORT: {IDS_PORT}")
+else:
+    print("Environment variables SERVER_PORT or IDS_PORT are not set.")
+
+
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri="redis://localhost:6379",  # or your Redis server URI
+    default_limits=[]
+)
 
 @app.route('/')
 def home():
     return 'Flask Server is Running!'
 
+## REGISTER ROUTE BLUEPRINTS
+app.register_blueprint(IDS_bp, url_prefix='/api/ids')
 
 
-@app.route('/trigger-intrusion', methods=['POST'])
-def trigger_intrusion():
-    try:
-        # Forward the incoming JSON to the Node.js server
-        response = requests.post(
-            f'http://localhost:{dashboardPORT}/api/ids',  # Adjust to your Node.js endpoint
-            json=request.json
-        )
-        return jsonify(response.json()), response.status_code
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=PORT)
