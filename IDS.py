@@ -236,7 +236,30 @@ def match_rule(packet, rules):
                     else:
                         slowloris_tracker[slowloris_key] = {"count": 1, "first_seen": now}
 
-                if flags_int == 0x014:   #### ✅ BOTNET DETECTION ####
+                    #### ✅ BOTNET DETECTION ####
+                    botnet_key = (dst_ip, dst_port)
+                    botnet_entry = botnet_tracker[botnet_key]
+
+                    if now - botnet_entry["first_seen"] <= BOTNET_WINDOW:
+                        botnet_entry["count"] += 1
+                        # print(botnet_entry["count"], botnet_key)
+                        if botnet_entry["count"] > BOTNET_THRESHOLD:
+                            if not last_post_request or now - last_post_request > time_interval:
+                                detection_details = {
+                                    "src_ip": src_ip,
+                                    "dst_ip": dst_ip,
+                                    "intrusion_type": "Botnet Attack",
+                                    "timestamp": now
+                                }
+                                send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
+                                print(f"[RECORD] POSSIBLE BOTNET ATTACK: TOO MANY SYN Packets from {src_ip} to {dst_ip}:{dst_port}")
+                                botnet_tracker[botnet_key] = {"port": dst_port, "count": 1, "first_seen": now}
+                                last_post_request = now
+                    else:
+                        botnet_tracker[botnet_key] = {"port": dst_port, "count": 1, "first_seen": now}
+
+
+                if flags_int == 0x02:   #### ✅ BOTNET DETECTION ####
                     src_port = int(packet.tcp.srcport)
                     now = time.time()
                     
