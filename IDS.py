@@ -10,7 +10,7 @@ print(f"[INFO] IDS_SERVER_PORT: {IDS_SERVER_PORT}")
 
 # Track HTTP POST requests
 last_post_request = 0 # Last time a POST request was sent (Do not change)
-time_interval = 5  # Time interval in seconds to wait before sending another POST request
+time_interval = 30  # Time interval in seconds to wait before sending another POST request
 
 # Track Brute packets
 ssh_brute_tracker = defaultdict(int)
@@ -76,6 +76,7 @@ def match_rule(packet, rules):
             dst_ip = packet.ip.dst
             proto = packet.transport_layer if hasattr(packet, 'transport_layer') and packet.transport_layer else "UNKNOWN"
             payload = packet.get_raw_packet()
+            now = time.time()
 
             # Rule Matching Logic (Snort-style and basic)
             for rule in rules:
@@ -115,9 +116,8 @@ def match_rule(packet, rules):
                         key = (src_ip, dst_ip)
                         tracker = ssh_brute_tracker
                         tracker[key] += 1
-                        if tracker[key] == BRUTE_THRESHOLD:
+                        if tracker[key] >= BRUTE_THRESHOLD:
                             if not last_post_request or now - last_post_request > time_interval:
-                                now = time.time()
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
@@ -133,9 +133,9 @@ def match_rule(packet, rules):
                         key = (src_ip, dst_ip)
                         tracker = ftp_brute_tracker
                         tracker[key] += 1
-                        if tracker[key] == BRUTE_THRESHOLD:
+                        if tracker[key] >= BRUTE_THRESHOLD:
                             if not last_post_request or now - last_post_request > time_interval:
-                                now = time.time()
+                                #now = time.time()
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
@@ -148,7 +148,7 @@ def match_rule(packet, rules):
                                 last_post_request = now
 
                     # This line will run regardless of the type
-                    print(f"[ALERT] {msg} Source: {src_ip}, Destination: {dst_ip}, Protocol: {proto}")
+                    #print(f"[ALERT] {msg} Source: {src_ip}, Destination: {dst_ip}, Protocol: {proto}")
 
                 else:
                     rule_parts = rule.split()
@@ -172,7 +172,7 @@ def match_rule(packet, rules):
                     dst_port = int(packet.tcp.dstport)
                     now = time.time()
 
-                    print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
+                    # print(f"[NOT MALICIOUS] SYN Packet -> Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Time: {now}")
 
                     #### ✅ PORT SCAN DETECTION ####
                     entry = port_scan_tracker[src_ip]
@@ -209,7 +209,7 @@ def match_rule(packet, rules):
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                                print(f"[RECORD] SYN Flood detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {flood_entry['count']}")
+                                # print(f"[RECORD] SYN Flood detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {flood_entry['count']}")
                                 syn_flood_tracker[flood_key] = {"count": 0, "first_seen": now}
                                 last_post_request = now
                     else:
@@ -230,7 +230,7 @@ def match_rule(packet, rules):
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
-                                print(f"[RECORD] Slowloris attack detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {entry['count']}")
+                                # print(f"[RECORD] Slowloris attack detected! Src: {src_ip}, Dst: {dst_ip}:{dst_port}, Count: {entry['count']}")
                                 slowloris_tracker[slowloris_key] = {"count": 0, "first_seen": now}
                                 last_post_request = now
                     else:
