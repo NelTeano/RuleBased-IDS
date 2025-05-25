@@ -121,7 +121,7 @@ def match_rule(packet, rules):
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
-                                    "intrusion_type": "SSH PATATOR",
+                                    "intrusion_type": "SSH",
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
@@ -139,7 +139,7 @@ def match_rule(packet, rules):
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
-                                    "intrusion_type": "FTP PATATOR",
+                                    "intrusion_type": "FTP",
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
@@ -185,7 +185,7 @@ def match_rule(packet, rules):
                             detection_details = {
                                 "src_ip": src_ip,
                                 "dst_ip": dst_ip,
-                                "intrusion_type": "Port Scan",
+                                "intrusion_type": "Portscan",
                                 "timestamp": now
                             }
                             send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
@@ -205,7 +205,7 @@ def match_rule(packet, rules):
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
-                                    "intrusion_type": "DoS Attack",
+                                    "intrusion_type": "DoS",
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
@@ -226,7 +226,7 @@ def match_rule(packet, rules):
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
-                                    "intrusion_type": "DoS Attack",
+                                    "intrusion_type": "DoS",
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
@@ -248,7 +248,7 @@ def match_rule(packet, rules):
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
-                                    "intrusion_type": "Botnet Attack",
+                                    "intrusion_type": "Bot",
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
@@ -272,7 +272,7 @@ def match_rule(packet, rules):
                                 detection_details = {
                                     "src_ip": src_ip,
                                     "dst_ip": dst_ip,
-                                    "intrusion_type": "Botnet Attack",
+                                    "intrusion_type": "Bot",
                                     "timestamp": now
                                 }
                                 send_detection_occure(f"http://localhost:{IDS_SERVER_PORT}/api/ids/trigger-intrusion", detection_details)
